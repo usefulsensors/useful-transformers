@@ -12,4 +12,9 @@ setup(
     },
     cmake_install_dir='examples/whisper',
     python_requires=">=3.7",
+    install_requires=[
+        "numpy",
+        "tiktoken",
+        "tqdm",
+    ],
 )

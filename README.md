@@ -21,6 +21,8 @@ If you don't have a wav file handy, running the above command will transcribe an
 
 ![Performance comparison](https://github.com/usefulsensors/useful-transformers/blob/main/examples/whisper/assets/perf-comparison.png)
 
+The plot shows `useful-transformers` Whisper `tiny.en` model's inference times across the examples with varying durations. `useful-transformer` is 2x faster than `faster-whisper`'s int8 implementation. `useful-transformer` uses FP16 matrix multiplication on the NPU available in the RK3588 processor. The majority of benefit comes from the large matrix multiplications (of sizes `1500x384x384` for the tiny.en model) in the encoder.
+
 ## TODO
 
  - [x] Whisper tiny.en

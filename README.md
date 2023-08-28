@@ -14,3 +14,28 @@ The easiest way to try out Whisper transcription is to install the [release](htt
 
 If you don't have a wav file handy, running the above command will transcribe an example provided in the package.
 
+    $ taskset -c 4-7 python -m useful_transformers.transcribe_wav
+    Ever tried, ever failed. No matter, try again. Fail again. Fail better.
+
+## Performance
+
+![Performance comparison](https://github.com/usefulsensors/useful-transformers/blob/main/examples/whisper/assets/perf-comparison.png)
+
+## TODO
+
+ - [x] Whisper tiny.en
+ - [x] Whisper base.en
+ - [ ] Larger Whisper models
+ - [ ] Use int8 matmuls from the librknnrt
+ - [ ] Use int4 matmuls (request Rockhip for int4 matmul kernels)
+ - [ ] Use asynchronous kernel launches (request Rockchip for better APIs in general)
+ - [ ] Decode with timestamps
+
+
+## Contributors
+* Nat Jeffries (@njeffrie)
+* Manjunath Kudlur (@keveman)
+* Guy Nicholson (@guynich)
+* James Wang (@JamesUseful)
+* Pete Warden (@petewarden)
+* Ali Zartash (@aliz)

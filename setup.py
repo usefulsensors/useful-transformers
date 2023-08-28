@@ -5,10 +5,10 @@ setup(
     description='Efficient Transformer models inference',
     author='Useful Sensors Inc.',
     license='GPLv3',
-    package_dir={'useful_whisper': 'examples/whisper'},
-    packages=['useful_whisper'],
+    package_dir={'useful_transformers': 'examples/whisper'},
+    packages=['useful_transformers'],
     package_data={
-        'useful_whisper': ['assets/*', 'weights/*'],
+        'useful_transformers': ['assets/*', 'weights/*'],
     },
     cmake_install_dir='examples/whisper',
     python_requires=">=3.7",

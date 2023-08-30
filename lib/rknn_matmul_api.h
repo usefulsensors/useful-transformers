@@ -21,7 +21,8 @@ extern "C" {
 
 typedef rknn_context rknn_matmul_ctx;
 
-typedef struct _rknn_matmul_tensor_attr {
+typedef struct _rknn_matmul_tensor_attr
+{
   char name[RKNN_MAX_NAME_LEN];
 
   // indicate A(M, K) or B(K, N) or C(M, N)
@@ -37,7 +38,8 @@ typedef struct _rknn_matmul_tensor_attr {
   rknn_tensor_type type;
 } rknn_matmul_tensor_attr;
 
-typedef struct _rknn_matmul_io_attr {
+typedef struct _rknn_matmul_io_attr
+{
   // indicate A(M, K) or B(K, N) or C(M, N)
   rknn_matmul_tensor_attr A;
   rknn_matmul_tensor_attr B;
@@ -47,14 +49,13 @@ typedef struct _rknn_matmul_io_attr {
 /*
   matmul information struct
  */
-typedef struct rknn_matmul_info_t {
+typedef struct rknn_matmul_info_t
+{
   int32_t M;
-  int32_t K;  // limit: rk356x: int8 type must be aligned with 32byte, float16
-              // type must be aligned with 16byte; rk3588: int8 type must be
-              // aligned with 32byte, float16 type must be aligned with 32byte;
-  int32_t N;  // limit: rk356x: int8 type must be aligned with 16byte, float16
-              // type must be aligned with 8byte; rk3588: int8 type must be
-              // aligned with 32byte, float16 type must be aligned with 16byte;
+  int32_t K; // limit: rk356x: int8 type must be aligned with 32byte, float16 type must be aligned with 16byte;
+             // rk3588: int8 type must be aligned with 32byte, float16 type must be aligned with 32byte;
+  int32_t N; // limit: rk356x: int8 type must be aligned with 16byte, float16 type must be aligned with 8byte;
+             // rk3588: int8 type must be aligned with 32byte, float16 type must be aligned with 16byte;
 
   // matmul data type
   // int8: int8(A) x int8(B) -> int32(C)
@@ -81,27 +82,26 @@ typedef struct rknn_matmul_info_t {
     return:
         int                         error code
 */
-int rknn_matmul_create(rknn_matmul_ctx *ctx, rknn_matmul_info *info,
-                       rknn_matmul_io_attr *io_attr);
+int rknn_matmul_create(rknn_matmul_ctx* ctx, rknn_matmul_info* info, rknn_matmul_io_attr* io_attr);
 
 /* rknn_matmul_set_io_mem
 
     params:
         rknn_matmul_ctx ctx            the handle of context.
         rknn_tensor_mem *mem           the pointer of tensor memory information.
-        rknn_matmul_tensor_attr *attr  the attribute of input or output tensor
-   buffer. return: int                         error code.
+        rknn_matmul_tensor_attr *attr  the attribute of input or output tensor buffer.
+    return:
+        int                         error code.
 
     formula:
       C = A * B,
 
     limit:
       K <= 4096
-      K limit: rk356x: int8 type must be aligned with 32byte, float16 type must
-   be aligned with 16byte; rk3588: int8 type must be aligned with 32byte,
-   float16 type must be aligned with 32byte; N limit: rk356x: int8 type must be
-   aligned with 16byte, float16 type must be aligned with 8byte; rk3588: int8
-   type must be aligned with 32byte, float16 type must be aligned with 16byte;
+      K limit: rk356x: int8 type must be aligned with 32byte, float16 type must be aligned with 16byte;
+               rk3588: int8 type must be aligned with 32byte, float16 type must be aligned with 32byte;
+      N limit: rk356x: int8 type must be aligned with 16byte, float16 type must be aligned with 8byte;
+               rk3588: int8 type must be aligned with 32byte, float16 type must be aligned with 16byte;
 
     A shape: M x K
       normal layout: (M, K)
@@ -211,8 +211,7 @@ int rknn_matmul_create(rknn_matmul_ctx *ctx, rknn_matmul_info *info,
                ...
                N(n-3)Mm, N(n-2)Mm, ..., NnMm]
  */
-int rknn_matmul_set_io_mem(rknn_matmul_ctx ctx, rknn_tensor_mem *mem,
-                           rknn_matmul_tensor_attr *attr);
+int rknn_matmul_set_io_mem(rknn_matmul_ctx ctx, rknn_tensor_mem* mem, rknn_matmul_tensor_attr* attr);
 
 /*  rknn_matmul_set_core_mask
 
@@ -231,8 +230,7 @@ int rknn_matmul_set_io_mem(rknn_matmul_ctx ctx, rknn_tensor_mem *mem,
     return:
         int                         error code.
 */
-int rknn_matmul_set_core_mask(rknn_matmul_ctx context,
-                              rknn_core_mask core_mask);
+int rknn_matmul_set_core_mask(rknn_matmul_ctx context, rknn_core_mask core_mask);
 
 /*  rknn_matmul_run
 
@@ -257,7 +255,7 @@ int rknn_matmul_run(rknn_matmul_ctx ctx);
 int rknn_matmul_destroy(rknn_matmul_ctx ctx);
 
 #ifdef __cplusplus
-}  // extern "C"
+} // extern "C"
 #endif
 
-#endif  // _RKNN_MATMUL_API_H
+#endif // _RKNN_MATMUL_API_H

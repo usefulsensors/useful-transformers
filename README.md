@@ -8,6 +8,11 @@ The easiest way to try out Whisper transcription is to install the [release](htt
     # Preferably inside a virtual environment
     $ python -m pip install https://github.com/usefulsensors/useful-transformers/releases/download/0.1_rk3588/useful_transformers-0.1-cp310-cp310-linux_aarch64.whl
 
+To build from source, it is also possible to install directly from a tree. E.g. to build the `dev` branch:
+
+    # Preferably inside a virtual environment
+    $ python -m pip install git+https://github.com/usefulsensors/useful-transformers@dev
+
  Try transcribing a wav file.
 
     $ taskset -c 4-7 python -m useful_transformers.transcribe_wav <wav_file>
@@ -40,4 +45,4 @@ The plot shows `useful-transformers` Whisper `tiny.en` model's inference times a
 * Guy Nicholson (@guynich)
 * James Wang (@JamesUseful)
 * Pete Warden (@petewarden)
-* Ali Zartash (@aliz)
+* Ali Zartash (@aliz64)

@@ -86,19 +86,20 @@ TextDecoder::TextDecoder(int num_layers, int n_text_max_ctx, int n_state,
       ln_beta(n_state),
       detokenizer0(1, n_state, n_vocab / 3, 0),
       detokenizer1(1, n_state, n_vocab / 3, 1),
-      detokenizer2(1, n_state, n_vocab / 3, 2) {
-  assert(n_vocab % 3 == 0);
+      detokenizer2(1, n_state, n_vocab - 2 * n_vocab / 3, 2) {
 }
 
 void TextDecoder::call(int prompt) {
   int offset = blocks.blocks[0]->attn.cur_kv_len;
   int slice_len = n_vocab / 3;
+  int last_slice_len = n_vocab - 2 * slice_len;
   Matmul *detokenizer = prompt < slice_len       ? &detokenizer0
                         : prompt < 2 * slice_len ? &detokenizer1
                                                  : &detokenizer2;
   for (int j = 0; j < n_state; ++j) {
+    int col = (prompt < 2 * slice_len) ? (prompt % slice_len) : ((prompt - 2 * slice_len) % last_slice_len);
     blocks.blocks[0]->attn.Q.A_at(0, j) =
-        detokenizer->B_at(j, prompt % (n_vocab / 3)) +
+        detokenizer->B_at(j, col) +
         positional_embedding[(0 + offset) * n_state + j];
   }
   blocks.call(1);
@@ -143,7 +144,7 @@ void TextDecoder::get_logits(__fp16 *logits) {
 #pragma omp section
     { copy_C_to_fp16(&detokenizer1, logits + n_vocab / 3, 1, n_vocab / 3); }
 #pragma omp section
-    { copy_C_to_fp16(&detokenizer2, logits + 2 * n_vocab / 3, 1, n_vocab / 3); }
+    { copy_C_to_fp16(&detokenizer2, logits + 2 * n_vocab / 3, 1, n_vocab - 2 * n_vocab / 3); }
   }
 }
 
@@ -167,10 +168,10 @@ void TextDecoder::log_softmax(__fp16 *logits,
     }
 #pragma omp section
     {
-      copy_C_to_fp16(&detokenizer2, logits + 2 * n_vocab / 3, 1, n_vocab / 3);
-      suppress(logits + 2 * n_vocab / 3, 2 * n_vocab / 3, n_vocab, n_vocab / 3,
+      copy_C_to_fp16(&detokenizer2, logits + 2 * n_vocab / 3, 1, n_vocab - 2 * n_vocab / 3);
+      suppress(logits + 2 * n_vocab / 3, 2 * n_vocab / 3, n_vocab, n_vocab - 2 * n_vocab / 3,
                suppress_tokens);
-      max2 = compute_max(logits + 2 * n_vocab / 3, n_vocab / 3);
+      max2 = compute_max(logits + 2 * n_vocab / 3, n_vocab - 2 * n_vocab / 3);
     }
   }
   __fp16 max = std::max(std::max(max0, max1), max2);

@@ -123,7 +123,7 @@ class WhisperModel(object):
 
         set_encoder_params(self.model, params, dims)
         set_decoder_params(self.model, params, dims)
-        self.tokenizer = get_tokenizer(multilingual=False)
+        self.tokenizer = get_tokenizer(multilingual='en' not in model)
         assert os.sched_getaffinity(os.getpid()) == set([4, 5, 6, 7]), (
             f'Should be run with taskset -c4-7')
 
@@ -187,7 +187,7 @@ class WhisperModel(object):
         return decoded_tokens
 
 
-def decode_wav_file(filename):
+def decode_wav_file(filename, model='tiny.en'):
     import wave
     import tqdm
     w = wave.open(filename)
@@ -197,7 +197,7 @@ def decode_wav_file(filename):
     audio = np.frombuffer(frames, dtype=np.int16)
     audio = audio.astype(np.float32) / np.iinfo(np.int16).max
     segments = np.split(audio, np.arange(0, audio.shape[0], 480000)[1:])
-    model = WhisperModel()
+    model = WhisperModel(model)
     decoded = []
     for segment in tqdm.tqdm(segments):
         remainder = 480000 - segment.shape[0]

@@ -168,11 +168,14 @@ PYBIND11_MODULE(pybind_whisper, m) {
         int last_layer_idx = dec.blocks.blocks.size() - 1;
         int n_vocab = dec.n_vocab;
         int slice_len = n_vocab / 3;
+        int last_slice_len = n_vocab - 2 * n_vocab / 3;
         auto y = numpy_float_array(1 * n_vocab);
         float *y_ptr = static_cast<float *>(y.request().ptr);
         for (int i = 0; i < slice_len; ++i) {
           y_ptr[i] = dec.detokenizer0.C_at(0, i);
           y_ptr[i + slice_len] = dec.detokenizer1.C_at(0, i);
+	}
+        for (int i = 0; i < last_slice_len; ++i) {
           y_ptr[i + 2 * slice_len] = dec.detokenizer2.C_at(0, i);
         }
         return y.reshape({1, n_vocab});
@@ -297,11 +300,14 @@ PYBIND11_MODULE(pybind_whisper, m) {
              int last_layer_idx = model.n_text_layer - 1;
              int n_vocab = model.n_vocab;
              int slice_len = n_vocab / 3;
+	     int last_slice_len = n_vocab - 2 * n_vocab / 3;
              auto y = numpy_float_array(1 * n_vocab);
              float *y_ptr = static_cast<float *>(y.request().ptr);
              for (int i = 0; i < slice_len; ++i) {
                y_ptr[i] = decoder->detokenizer0.C_at(0, i);
                y_ptr[i + slice_len] = decoder->detokenizer1.C_at(0, i);
+	     }
+             for (int i = 0; i < last_slice_len; ++i) {
                y_ptr[i + 2 * slice_len] = decoder->detokenizer2.C_at(0, i);
              }
              return y.reshape({1, n_vocab});

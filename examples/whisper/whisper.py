@@ -103,10 +103,16 @@ def set_decoder_params(model, p, dims):
 
 class WhisperModel(object):
     def __init__(self, model='tiny.en'):
-        params_file = os.path.join(os.path.dirname(__file__), "weights", f"{model}.npz")
+        self.model_name = model
+        self.tokenizer = None
+
+        params_file = os.path.join(
+            os.path.dirname(__file__), "weights", f"{model}.npz")
         params_file = np.load(params_file)
-        dims = {k.split('/')[-1]:v for k, v in params_file.items() if k.startswith('dims/')}
-        params = {k.split('/')[-1]:v for k, v in params_file.items() if k.startswith('params/')}
+        dims = {k.split('/')[-1]:v for k, v in params_file.items() \
+            if k.startswith('dims/')}
+        params = {k.split('/')[-1]:v for k, v in params_file.items() \
+            if k.startswith('params/')}
 
         dims = ModelDimensions(**dims)
         self.model = CWhisperModel(dims.n_mels,
@@ -123,22 +129,36 @@ class WhisperModel(object):
 
         set_encoder_params(self.model, params, dims)
         set_decoder_params(self.model, params, dims)
-        self.tokenizer = get_tokenizer(multilingual='en' not in model)
+
         assert os.sched_getaffinity(os.getpid()) == set([4, 5, 6, 7]), (
             f'Should be run with taskset -c4-7')
 
         assets_dir = os.path.join(os.path.dirname(__file__), "assets")
         self.N_FFT = 400
         self.HOP_LENGTH = 160
-        self.mel_filters = np.load(os.path.join(assets_dir, 'mel_filters.npz'))['mel_80'].T
+        self.mel_filters = np.load(
+            os.path.join(assets_dir, 'mel_filters.npz'))['mel_80'].T
         fft_matrix_file = np.load(os.path.join(assets_dir, 'fft_params.npz'))
         self.fft_matrix_real = fft_matrix_file['fft_matrix_real']
         self.fft_matrix_imag = fft_matrix_file['fft_matrix_imag']
 
+    def init_tokenizer(self, language, task):
+        if self.model_name.endswith(".en"):
+            assert language == "en", f"{self.model_name} is english-only"
+            assert task == "transcribe", f"{self.model_name} is transcribe-only"
+            self.tokenizer = get_tokenizer(multilingual=False)
+        else:
+            assert task in {"transcribe", "translate"}, f"task {task} unknown"
+            self.tokenizer = get_tokenizer(
+                multilingual=True, language=language, task=task)
+        return self.tokenizer
+
     def mel_spectrogram(self, audio):
         audio = audio.squeeze()
-        audio = np.pad(audio, [self.N_FFT // 2, self.N_FFT // 2], mode='reflect')
-        audio = np.lib.stride_tricks.sliding_window_view(audio, self.N_FFT)[::self.HOP_LENGTH]
+        audio = np.pad(
+            audio, [self.N_FFT // 2, self.N_FFT // 2], mode='reflect')
+        audio = np.lib.stride_tricks.sliding_window_view(
+            audio, self.N_FFT)[::self.HOP_LENGTH]
         stft_real = audio @ self.fft_matrix_real.squeeze()
         stft_imag = audio @ self.fft_matrix_imag.squeeze()
         magnitudes = stft_real ** 2 + stft_imag ** 2
@@ -150,8 +170,9 @@ class WhisperModel(object):
         log_spec = log_spec[:-1, :][np.newaxis, ...]
         return log_spec
 
-    def decode_no_timestamps(self, mel):
-        tokenizer = self.tokenizer
+    def decode_no_timestamps(self, mel, language="en", task="transcribe"):
+        tokenizer = self.init_tokenizer(language, task)
+
         suppress_tokens_sans_no_speech = [
             tokenizer.transcribe,
             tokenizer.translate,
@@ -160,27 +181,29 @@ class WhisperModel(object):
             tokenizer.sot_lm,
             tokenizer.no_speech,
             tokenizer.no_timestamps] + list(tokenizer.non_speech_tokens)
-    
+
         suppress_tokens = suppress_tokens_sans_no_speech + [tokenizer.no_speech]
-        initial_suppress_tokens = suppress_tokens + tokenizer.encode(' ') + [tokenizer.eot]
-    
+        initial_suppress_tokens = suppress_tokens + tokenizer.encode(' ') + \
+            [tokenizer.eot]
+
         self.model.reset(mel)
-    
+
         initial_prompt = tokenizer.sot_sequence_including_notimestamps
         for p in initial_prompt:
             self.model.call_no_copy(p)
-    
-        logprobs = self.model.log_softmax(initial_suppress_tokens).view(np.float16)
-    
+
+        logprobs = self.model.log_softmax(
+            initial_suppress_tokens).view(np.float16)
+
         decoded_tokens = [np.argmax(logprobs)]
-    
+
         while len(decoded_tokens) < 224:
             self.model.call_no_copy(decoded_tokens[-1])
             logprobs = self.model.log_softmax(suppress_tokens).view(np.float16)
             speech_token = np.argmax(logprobs[:tokenizer.eot])
             speech_logprob = logprobs[speech_token]
             eot_logprob = logprobs[tokenizer.eot]
-    
+
             if eot_logprob > speech_logprob:
                 break
             decoded_tokens.append(speech_token)

@@ -60,6 +60,10 @@ def set_encoder_params(model, p, dims):
     model.set_encoder_ln_post_beta(p[f'encoder.ln_post.bias'])
 
 
+def next_multiple_of_3(x):
+    return int(3 * ((x + 2) // 3))
+
+
 def set_decoder_params(model, p, dims):
     model.set_decoder_positional_embedding(p['decoder.positional_embedding'])
 
@@ -95,10 +99,15 @@ def set_decoder_params(model, p, dims):
     model.set_decoder_ln_gamma(p[f'decoder.ln.weight'])
     model.set_decoder_ln_beta(p[f'decoder.ln.bias'])
     Wdetokenizer = p[f'decoder.token_embedding.weight'].T
-    slice_len = dims.n_vocab // 3
+    n_vocab = next_multiple_of_3(dims.n_vocab)
+    slice_len = n_vocab // 3
     model.set_detokenizer0(Wdetokenizer[:, :slice_len])
     model.set_detokenizer1(Wdetokenizer[:, slice_len:2*slice_len])
-    model.set_detokenizer2(Wdetokenizer[:, 2*slice_len:])
+    extra_columns = n_vocab - dims.n_vocab
+    third_slice = Wdetokenizer[:, 2*slice_len:]
+    if extra_columns:
+        third_slice = np.concatenate([third_slice, np.zeros_like(third_slice[:, :extra_columns])], -1)
+    model.set_detokenizer2(third_slice)
 
 
 class WhisperModel(object):
@@ -109,6 +118,7 @@ class WhisperModel(object):
         params = {k.split('/')[-1]:v for k, v in params_file.items() if k.startswith('params/')}
 
         dims = ModelDimensions(**dims)
+        n_vocab = next_multiple_of_3(dims.n_vocab)
         self.model = CWhisperModel(dims.n_mels,
                                    dims.n_audio_ctx,
                                    dims.n_audio_state,
@@ -118,12 +128,14 @@ class WhisperModel(object):
                                    dims.n_text_state,
                                    dims.n_text_head,
                                    dims.n_text_layer,
-                                   dims.n_vocab)
+                                   n_vocab)
         self.dims = dims
 
         set_encoder_params(self.model, params, dims)
         set_decoder_params(self.model, params, dims)
-        self.tokenizer = get_tokenizer(multilingual=False)
+        self.multilingual = not model.endswith('.en')
+        self.tokenizer = get_tokenizer(multilingual=self.multilingual)
+        self.lang_dict = dict(zip(self.tokenizer.all_language_codes, self.tokenizer.all_language_tokens))
         assert os.sched_getaffinity(os.getpid()) == set([4, 5, 6, 7]), (
             f'Should be run with taskset -c4-7')
 
@@ -150,7 +162,7 @@ class WhisperModel(object):
         log_spec = log_spec[:-1, :][np.newaxis, ...]
         return log_spec
 
-    def decode_no_timestamps(self, mel):
+    def decode_no_timestamps(self, mel, task='transcribe', src_lang='en'):
         tokenizer = self.tokenizer
         suppress_tokens_sans_no_speech = [
             tokenizer.transcribe,
@@ -166,7 +178,12 @@ class WhisperModel(object):
     
         self.model.reset(mel)
     
-        initial_prompt = tokenizer.sot_sequence_including_notimestamps
+        initial_prompt = list(tokenizer.sot_sequence_including_notimestamps)
+        if self.multilingual:
+            assert src_lang in self.lang_dict, f'{src_lang} is not a supported language'
+            initial_prompt[1] = self.lang_dict[src_lang]
+            if task == 'translate': initial_prompt[2] = self.tokenizer.translate
+        print(f'{initial_prompt} {self.tokenizer.decode(initial_prompt)}')
         for p in initial_prompt:
             self.model.call_no_copy(p)
     
@@ -187,7 +204,7 @@ class WhisperModel(object):
         return decoded_tokens
 
 
-def decode_wav_file(filename):
+def decode_wav_file(filename, model='tiny.en', task='transcribe', src_lang='en'):
     import wave
     import tqdm
     w = wave.open(filename)
@@ -197,12 +214,12 @@ def decode_wav_file(filename):
     audio = np.frombuffer(frames, dtype=np.int16)
     audio = audio.astype(np.float32) / np.iinfo(np.int16).max
     segments = np.split(audio, np.arange(0, audio.shape[0], 480000)[1:])
-    model = WhisperModel()
+    model = WhisperModel(model)
     decoded = []
     for segment in tqdm.tqdm(segments):
         remainder = 480000 - segment.shape[0]
         segment = np.concatenate([segment, np.zeros([remainder]).astype(np.float32)])
         mel = model.mel_spectrogram(segment[np.newaxis])
-        tokens = model.decode_no_timestamps(mel)
+        tokens = model.decode_no_timestamps(mel, task, src_lang)
         decoded += tokens
     return model.tokenizer.decode(decoded)

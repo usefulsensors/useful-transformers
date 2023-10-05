@@ -172,6 +172,9 @@ class WhisperModel(object):
             tokenizer.sot_lm,
             tokenizer.no_speech,
             tokenizer.no_timestamps] + list(tokenizer.non_speech_tokens)
+        # Suppress padding tokens.
+        for i in range(self.dims.n_vocab, next_multiple_of_3(self.dims.n_vocab)):
+          suppress_tokens_sans_no_speech += [i]
     
         suppress_tokens = suppress_tokens_sans_no_speech + [tokenizer.no_speech]
         initial_suppress_tokens = suppress_tokens + tokenizer.encode(' ') + [tokenizer.eot]

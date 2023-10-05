@@ -58,13 +58,12 @@ __fp16 compute_max(__fp16* src, int N) {
   __fp16 max = src[0];
   int i;
   for (i = 0; i < N - (N % 8); i += 8) {
-    auto v = vld1q_f16(src + i);
-    max = std::max(max, vmaxnmvq_f16(v));
+    max = std::max(max, vmaxnmvq_f16(vld1q_f16(src + i)));
   }
-  if (N % 8 != 0) {
-    for (int rem_i = 0; rem_i < N - i; ++rem_i) {
-      max = std::max(max, src[i + rem_i]);
-    }
+
+  // Handle any remaining values if N % 8 != 0.
+  for (; i < N; ++i) {
+    max = std::max(max, src[i]);
   }
   return max;
 }

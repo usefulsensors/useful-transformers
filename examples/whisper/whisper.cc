@@ -125,13 +125,14 @@ void TextDecoder::call(int prompt) {
   }
 }
 
-inline void suppress(__fp16 *src, int begin, int end, int size,
+inline void suppress(__fp16 *src, int begin, int end,
                      const std::vector<int> &tokens) {
-  __fp16 minus_inf = -std::numeric_limits<__fp16>::infinity();
-  for (int i = 0; i < tokens.size(); ++i) {
-    int token = tokens[i];
+  // 0xfc00 is minus infinity for __fp16.
+  uint16_t neg_inf_u16 = 0xfc00;
+  __fp16 minus_inf = *(__fp16 *)&neg_inf_u16;
+  for (int token : tokens) {
     if (token < begin || token >= end) continue;
-    src[token % size] = minus_inf;
+    src[token] = minus_inf;
   }
 }
 
@@ -155,21 +156,19 @@ void TextDecoder::log_softmax(__fp16 *logits,
 #pragma omp section
     {
       copy_C_to_fp16(&detokenizer0, logits, 1, n_vocab / 3);
-      suppress(logits, 0, n_vocab / 3, n_vocab / 3, suppress_tokens);
+      suppress(logits, 0, n_vocab / 3, suppress_tokens);
       max0 = compute_max(logits, n_vocab / 3);
     }
 #pragma omp section
     {
       copy_C_to_fp16(&detokenizer1, logits + n_vocab / 3, 1, n_vocab / 3);
-      suppress(logits + n_vocab / 3, n_vocab / 3, 2 * n_vocab / 3, n_vocab / 3,
-               suppress_tokens);
+      suppress(logits, n_vocab / 3, 2 * n_vocab / 3, suppress_tokens);
       max1 = compute_max(logits + n_vocab / 3, n_vocab / 3);
     }
 #pragma omp section
     {
       copy_C_to_fp16(&detokenizer2, logits + 2 * n_vocab / 3, 1, n_vocab / 3);
-      suppress(logits + 2 * n_vocab / 3, 2 * n_vocab / 3, n_vocab, n_vocab / 3,
-               suppress_tokens);
+      suppress(logits, 2 * n_vocab / 3, n_vocab, suppress_tokens);
       max2 = compute_max(logits + 2 * n_vocab / 3, n_vocab / 3);
     }
   }

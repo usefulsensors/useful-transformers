@@ -10,9 +10,9 @@ Matmul::Matmul(int M, int K, int N, int core) : M(M), K(K), N(N) {
   info.M = M;
   info.K = K_padded;
   info.N = N_padded;
-  info.type = RKNN_TENSOR_FLOAT16;
-  info.native_layout = 1;
-  info.perf_layout = 1;
+  info.type = RKNN_FLOAT16_MM_FLOAT16_TO_FLOAT32;
+  info.B_layout = 1;
+  info.AC_layout = 1;
   memset(&io_attr, 0, sizeof(rknn_matmul_io_attr));
 
   int ret = 0;

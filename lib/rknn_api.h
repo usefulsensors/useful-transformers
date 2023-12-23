@@ -59,11 +59,20 @@ extern "C" {
 /* dummy init flag: could only get total_weight_size and total_internal_size by rknn_query*/
 #define RKNN_FLAG_COLLECT_MODEL_INFO_ONLY       0x00000100
 
+/* allocate internal memory in outside */
+#define RKNN_FLAG_INTERNAL_ALLOC_OUTSIDE        0x00000200
+
 /* set GPU as the preferred execution backend When the operator is not supported by the NPU */
 #define RKNN_FLAG_EXECUTE_FALLBACK_PRIOR_DEVICE_GPU 0x00000400
 
-/* allocate internal memory in outside */
-#define RKNN_FLAG_INTERNAL_ALLOC_OUTSIDE        0x00000200
+/* enable allocate sram type buffers */
+#define RKNN_FLAG_ENABLE_SRAM                   0x00000800
+
+/* sram type buffers are shared among different contexts */
+#define RKNN_FLAG_SHARE_SRAM                    0x00001000
+
+/* default nice -19, this flag can disable default priority */
+#define RKNN_FLAG_DISABLE_PROC_HIGH_PRIORITY    0x00002000
 
 /*
     Error code returned by the RKNN API.
@@ -152,6 +161,7 @@ typedef enum _rknn_tensor_type {
     RKNN_TENSOR_UINT32,                                 /* data type is uint32. */
     RKNN_TENSOR_INT64,                                  /* data type is int64. */
     RKNN_TENSOR_BOOL,
+    RKNN_TENSOR_INT4,
 
     RKNN_TENSOR_TYPE_MAX
 } rknn_tensor_type;
@@ -169,6 +179,7 @@ inline static const char* get_type_string(rknn_tensor_type type)
     case RKNN_TENSOR_UINT32: return "UINT32";
     case RKNN_TENSOR_INT64: return "INT64";
     case RKNN_TENSOR_BOOL: return "BOOL";
+    case RKNN_TENSOR_INT4: return "INT4";
     default: return "UNKNOW";
     }
 }
@@ -339,6 +350,16 @@ typedef enum _rknn_tensor_mem_flags {
                                                          If the flag RKNN_TENSOR_MEMORY_FLAGS_FROM_PHYS is set, rknn_destroy_mem() will call free(mem).*/
     RKNN_TENSOR_MEMORY_FLAGS_UNKNOWN
 } rknn_tensor_mem_flags;
+
+/*
+   The mode to sync cacheable rknn memory.
+*/
+typedef enum _rknn_mem_sync_mode {
+    RKNN_MEMORY_SYNC_TO_DEVICE = 0x1, /* the mode used for consistency of device access after CPU accesses data. */
+    RKNN_MEMORY_SYNC_FROM_DEVICE = 0x2, /* the mode used for consistency of CPU access after device accesses data. */
+    RKNN_MEMORY_SYNC_BIDIRECTIONAL = RKNN_MEMORY_SYNC_TO_DEVICE | RKNN_MEMORY_SYNC_FROM_DEVICE, /* the mode used for consistency of data access
+                                                                                                         between device and CPU in both directions. */
+} rknn_mem_sync_mode;
 
 /*
     the memory information of tensor.
@@ -712,6 +733,19 @@ int rknn_set_input_shape(rknn_context ctx, rknn_tensor_attr* attr);
         int                         error code.
 */
 int rknn_set_input_shapes(rknn_context ctx, uint32_t n_inputs, rknn_tensor_attr attr[]);
+
+/*  rknn_mem_sync
+
+    sync cacheable rknn memory when both cpu and device access data.
+
+    input:
+        rknn_context context        the handle of context.
+        rknn_tensor_mem *mem        the pointer of tensor memory information.
+        rknn_mem_sync_mode mode     the mode of sync cache.
+    return:
+        int                         error code.
+*/
+int rknn_mem_sync(rknn_context context, rknn_tensor_mem* mem, rknn_mem_sync_mode mode);
 
 #ifdef __cplusplus
 } //extern "C"

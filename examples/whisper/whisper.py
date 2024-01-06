@@ -175,12 +175,12 @@ class WhisperModel(object):
         # Suppress padding tokens.
         for i in range(self.dims.n_vocab, next_multiple_of_3(self.dims.n_vocab)):
           suppress_tokens_sans_no_speech += [i]
-    
+
         suppress_tokens = suppress_tokens_sans_no_speech + [tokenizer.no_speech]
         initial_suppress_tokens = suppress_tokens + tokenizer.encode(' ') + [tokenizer.eot]
-    
+
         self.model.reset(mel)
-    
+
         initial_prompt = list(tokenizer.sot_sequence_including_notimestamps)
         if self.multilingual:
             assert src_lang in self.lang_dict, f'{src_lang} is not a supported language'
@@ -189,18 +189,18 @@ class WhisperModel(object):
         print(f'{initial_prompt} {self.tokenizer.decode(initial_prompt)}')
         for p in initial_prompt:
             self.model.call_no_copy(p)
-    
+
         logprobs = self.model.log_softmax(initial_suppress_tokens).view(np.float16)
-    
+
         decoded_tokens = [np.argmax(logprobs)]
-    
+
         while len(decoded_tokens) < 224:
             self.model.call_no_copy(decoded_tokens[-1])
             logprobs = self.model.log_softmax(suppress_tokens).view(np.float16)
             speech_token = np.argmax(logprobs[:tokenizer.eot])
             speech_logprob = logprobs[speech_token]
             eot_logprob = logprobs[tokenizer.eot]
-    
+
             if eot_logprob > speech_logprob:
                 break
             decoded_tokens.append(speech_token)
@@ -209,15 +209,26 @@ class WhisperModel(object):
 
 def decode_wav_file(filename, model='tiny.en', task='transcribe', src_lang='en'):
     import wave
-    import tqdm
     w = wave.open(filename)
     assert w.getnchannels() == 1, f'Only one channel supported'
     assert w.getsampwidth() == 2, f'Datatype should be int16'
+    assert w.getframerate() == 16000, f'Only 16kHz supported'
     frames = w.readframes(w.getnframes())
     audio = np.frombuffer(frames, dtype=np.int16)
-    audio = audio.astype(np.float32) / np.iinfo(np.int16).max
-    segments = np.split(audio, np.arange(0, audio.shape[0], 480000)[1:])
     model = WhisperModel(model)
+    return decode_pcm(audio, model, task, src_lang)
+
+def decode_pcm(audio, model, task='transcribe', src_lang='en'):
+    import tqdm
+    assert type(audio) == np.ndarray, f'audio should be a numpy array'
+    if audio.dtype in (np.int16, np.int32, np.int8):
+        audio = audio.astype(np.float32) / np.iinfo(audio.dtype).max
+    elif audio.dtype == np.float64:
+        audio = audio.astype(np.float32)
+    if type(model) is str:
+        model = WhisperModel(model)
+    assert type(model) is WhisperModel, f'model should be a WhisperModel or a string'
+    segments = np.split(audio, np.arange(0, audio.shape[0], 480000)[1:])
     decoded = []
     for segment in tqdm.tqdm(segments):
         remainder = 480000 - segment.shape[0]

@@ -40,4 +40,4 @@ The plot shows `useful-transformers` Whisper `tiny.en` model's inference times a
 * Guy Nicholson (@guynich)
 * James Wang (@JamesUseful)
 * Pete Warden (@petewarden)
-* Ali Zartash (@aliz)
+* Ali Zartash (@aliz64)

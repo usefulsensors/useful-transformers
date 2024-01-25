@@ -1,21 +1,32 @@
-# Useful Transformers
-Useful Transformers is a library for efficient inference of Transformer models. The focus is on low cost, low energy processors to run inference at the edge. The initial implementation is aimed at running OpenAI's [Whisper](https://github.com/openai/whisper) speech-to-text model efficiently on the [RK3588](https://www.rock-chips.com/a/en/products/RK35_Series/2022/0926/1660.html) processors' based single-board computers. The tiny.en Whisper model runs transcribes speech at 30x real-time speeds, and 2x better than best [known](https://github.com/guillaumekln/faster-whisper) implementation.
 
-## Getting started
+# Useful Transformers
+
+Useful Transformers is a library for efficient inference of Transformer models. The focus is on low cost, low energy processors to run inference at the edge. The initial implementation is aimed at running OpenAI's [Whisper](https://github.com/openai/whisper) speech-to-text model efficiently on the [RK3588](https://www.rock-chips.com/a/en/products/RK35_Series/2022/0926/1660.html) processors' based single-board computers. The tiny.en Whisper model runs transcribes speech at 30x real-time speeds, and 2x better than the best [known](https://github.com/guillaumekln/faster-whisper) implementation.
+
+## Getting Started
 
 The easiest way to try out Whisper transcription is to install the [release](https://github.com/usefulsensors/useful-transformers/releases/download/0.1_rk3588/useful_transformers-0.1-cp310-cp310-linux_aarch64.whl) wheel package.
 
-    # Preferably inside a virtual environment
-    $ python -m pip install https://github.com/usefulsensors/useful-transformers/releases/download/0.1_rk3588/useful_transformers-0.1-cp310-cp310-linux_aarch64.whl
+```bash
+# Preferably inside a virtual environment
+$ python -m pip install https://github.com/usefulsensors/useful-transformers/releases/download/0.1_rk3588/useful_transformers-0.1-cp310-cp310-linux_aarch64.whl
+```
 
- Try transcribing a wav file.
+Try transcribing a WAV file.
 
-    $ taskset -c 4-7 python -m useful_transformers.transcribe_wav <wav_file>
+```bash
+$ taskset -c 4-7 python -m useful_transformers.transcribe_wav <wav_file> [output_file]
+```
 
-If you don't have a wav file handy, running the above command will transcribe an example provided in the package.
+- `<wav_file>`: Path to the input WAV file.
+- `[output_file]`: (Optional) Path to save the transcribed text. If omitted, the transcription is printed to the console.
 
-    $ taskset -c 4-7 python -m useful_transformers.transcribe_wav
-    Ever tried, ever failed. No matter, try again. Fail again. Fail better.
+If you don't have a WAV file handy, running the command without specifying a WAV file will transcribe an example provided in the package.
+
+```bash
+$ taskset -c 4-7 python -m useful_transformers.transcribe_wav
+Ever tried, ever failed. No matter, try again. Fail again. Fail better.
+```
 
 ## Performance
 
@@ -25,14 +36,13 @@ The plot shows `useful-transformers` Whisper `tiny.en` model's inference times a
 
 ## TODO
 
- - [x] Whisper tiny.en
- - [x] Whisper base.en
- - [ ] Larger Whisper models
- - [ ] Use int8 matmuls from the librknnrt
- - [ ] Use int4 matmuls (request Rockhip for int4 matmul kernels)
- - [ ] Use asynchronous kernel launches (request Rockchip for better APIs in general)
- - [ ] Decode with timestamps
-
+- [x] Whisper tiny.en
+- [x] Whisper base.en
+- [ ] Larger Whisper models
+- [ ] Use int8 matmuls from the librknnrt
+- [ ] Use int4 matmuls (request Rockhip for int4 matmul kernels)
+- [ ] Use asynchronous kernel launches (request Rockchip for better APIs in general)
+- [ ] Decode with timestamps
 
 ## Contributors
 * Nat Jeffries (@njeffrie)
@@ -41,3 +51,5 @@ The plot shows `useful-transformers` Whisper `tiny.en` model's inference times a
 * James Wang (@JamesUseful)
 * Pete Warden (@petewarden)
 * Ali Zartash (@aliz)
+
+----

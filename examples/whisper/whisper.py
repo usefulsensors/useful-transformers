@@ -111,7 +111,7 @@ def set_decoder_params(model, p, dims):
 
 
 class WhisperModel(object):
-    def __init__(self, model='tiny.en'):
+    def __init__(self, model='tiny.en', verbose=True):
         params_file = os.path.join(os.path.dirname(__file__), "weights", f"{model}.npz")
         params_file = np.load(params_file)
         dims = {k.split('/')[-1]:v for k, v in params_file.items() if k.startswith('dims/')}
@@ -146,6 +146,8 @@ class WhisperModel(object):
         fft_matrix_file = np.load(os.path.join(assets_dir, 'fft_params.npz'))
         self.fft_matrix_real = fft_matrix_file['fft_matrix_real']
         self.fft_matrix_imag = fft_matrix_file['fft_matrix_imag']
+
+        self.verbose = verbose
 
     def mel_spectrogram(self, audio):
         audio = audio.squeeze()
@@ -186,7 +188,8 @@ class WhisperModel(object):
             assert src_lang in self.lang_dict, f'{src_lang} is not a supported language'
             initial_prompt[1] = self.lang_dict[src_lang]
             if task == 'translate': initial_prompt[2] = self.tokenizer.translate
-        print(f'{initial_prompt} {self.tokenizer.decode(initial_prompt)}')
+        if self.verbose:
+            print(f'{initial_prompt} {self.tokenizer.decode(initial_prompt)}')
         for p in initial_prompt:
             self.model.call_no_copy(p)
 
